@@ -97,7 +97,7 @@ bool KimeraVioRos::runKimeraVio() {
                  << ". 0: Mono, 1: Stereo.";
     } break;
   }
-  
+
   CHECK(vio_pipeline_) << "Vio pipeline construction failed.";
 
   // Finally, connect data_provider and vio_pipeline
@@ -116,6 +116,7 @@ bool KimeraVioRos::spin() {
   auto tic = VIO::utils::Timer::tic();
   bool is_pipeline_successful = false;
   if (vio_params_->parallel_run_) {
+
     // TODO(Toni): Technically, we can spare a thread with online dataprovider
     // since we can simply call .start() on the async spinners at the ctor level
     std::future<bool> data_provider_handle =
@@ -130,6 +131,7 @@ bool KimeraVioRos::spin() {
         std::async(std::launch::async,
                    &VIO::Pipeline::spin,
                    CHECK_NOTNULL(vio_pipeline_.get()));
+      
     // Run while ROS is ok and vio pipeline is not shutdown.
     ros::Rate rate(20);  // 20 Hz
     while (ros::ok() && !restart_vio_pipeline_) {

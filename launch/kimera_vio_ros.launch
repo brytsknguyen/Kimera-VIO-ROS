@@ -25,7 +25,7 @@
   <arg name="gt_topic"    default="ground_truth_odometry_topic"/>
 
   <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
-  <arg name="use_lcd" default="false"/>
+  <arg name="use_lcd" default="true"/>
 
   <!-- Parameters -->
   <!-- each dataset has its own set of parameter files -->
@@ -81,7 +81,9 @@
               --log_euroc_gt_data=$(arg log_output)
               --output_path=$(arg log_output_path)
               --viz_type=$(arg viz_type)
-              --visualize=$(arg visualize)">
+              --visualize=$(arg visualize)"
+              >
+          <!-- launch-prefix="gdb -ex run - -args" -->
     <param name="params_folder_path"    value="$(arg params_folder)"/>
 
     <param name="online_run"            value="$(arg online)"/>

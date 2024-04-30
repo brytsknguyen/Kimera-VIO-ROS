@@ -5,7 +5,6 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-
 #include <ros/ros.h>
 
 #include "kimera_vio_ros/KimeraVioRos.h"

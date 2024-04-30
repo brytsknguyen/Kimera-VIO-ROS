@@ -6,21 +6,18 @@
 
 #include "kimera_vio_ros/utils/UtilsRos.h"
 
-#include <string>
-
-#include <glog/logging.h>
-
 #include <geometry_msgs/Transform.h>
+#include <glog/logging.h>
+#include <gtsam/geometry/Pose3.h>
+#include <kimera-vio/common/VioNavState.h>
+#include <kimera-vio/frontend/CameraParams.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <gtsam/geometry/Pose3.h>
-
-#include <kimera-vio/common/VioNavState.h>
-#include <kimera-vio/frontend/CameraParams.h>
+#include <string>
 
 namespace VIO {
 

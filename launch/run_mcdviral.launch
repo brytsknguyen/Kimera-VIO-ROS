@@ -1,0 +1,194 @@
+<launch>
+
+    <arg name="publish_clock" default="--clock" />
+    <arg name="autorun" default="0" />
+    <arg name="loop_en" default="0" />
+
+    <!-- MCDVIRAL dataset, downloadable at mcdviral.github.io. -->
+
+    <arg name="data_path" default="/media/tmn/mySataSSD2/DATASETS/MCDVIRAL/PublishedSequences" />
+
+    <!-- <arg  name="bag_file"  default="$(arg data_path)/ntu_day_01/*.bag"/> -->
+    <!-- <arg  name="bag_file"  default="$(arg data_path)/kth_day_09/*.bag"/> -->
+    <arg name="bag_file" default="$(arg data_path)/kth_night_04/*.bag" />
+    <!-- <arg  name="bag_file"  default="$(arg data_path)/tuhh_day_03/*.bag"/> -->
+
+    <!-- Chose the config file based on the sequence names -->
+    <arg name="config_file" value="mcdviral_atv" if="$(eval 'ntu_'  in bag_file)" />
+    <arg name="config_file" value="mcdviral_hhs" if="$(eval 'kth_'  in bag_file)" />
+    <arg name="config_file" value="mcdviral_hhs" if="$(eval 'tuhh_' in bag_file)" />
+
+    <!-- Directory to log the bundle adjustment poses, pointclouds, and others-->
+    <arg name="exp_log_dir" default="/home/$(env USER)/kimera_vio_ros_logs/mcdviral" />
+
+
+    <!-- Kimera configs -->
+
+    <!-- General parameters -->
+    <arg name="verbosity" default="0" />
+
+    <!-- Set online to true if you use rosbag play or sensor stream -->
+    <arg name="online" default="true" />
+
+    <!-- Set use_sim_time to true if you use rosbag with clock argument -->
+    <param name="use_sim_time" value="false" />
+
+    <!-- Set log_output to true and KimeraVIO will log output of all modules to the log_output_path
+    location. -->
+    <arg name="log_output" default="false" />
+    <arg name="log_output_path" default="$(arg exp_log_dir)/" />
+
+    <rosparam param="gt_gyro_bias"> [-0.0, 0.0, 0.0] </rosparam>
+    <rosparam param="gt_accel_bias"> [-0.0, 0.0, 0.0] </rosparam>
+
+    <!-- If true, KimeraVIO will enable the LoopClosureDetector module. -->
+    <arg name="use_lcd" default="false" />
+    
+    <arg name="visualize" default="true" />
+    <!-- Type of visualization: 0: 2d3d_mesh, 1: pointcloud, 2: none -->
+    <arg name="viz_type" default="0" />
+
+    <!-- Use CameraInfo topics to get parameters, instead of yaml files -->
+    <arg name="use_online_cam_params" value="false" />
+
+    <!-- Frame IDs -->
+    <arg name="base_link_frame_id" value="base_link" />
+    <arg name="left_cam_frame_id"  value="cam0" />
+    <arg name="right_cam_frame_id" value="cam1" />
+
+    <!-- Launch actual pipeline -->
+
+    <!-- General Kimera-VIO-ROS launch file. Change arguments in your own launch
+            file and include this one to launch KimeraVIO on the dataset of your choice -->
+    <arg name="dataset_name" default="Euroc" />
+
+    <!-- Parameters -->
+    <!-- each dataset has its own set of parameter files -->
+    <!-- the parameters are set in param folder, ordered by the dataset's name -->
+    <arg name="params_folder" default="$(find kimera_vio_ros)/config/$(arg config_file)" />
+
+    <!-- Specify the absolute path to the vocabulary file. -->
+    <!-- This is usually in the VIO directory (VIO/vocabulary/ORBvoc.yml). -->
+    <arg name="path_to_vocab" default="$(find kimera_vio)/vocabulary/ORBvoc.yml" />
+
+    <!-- Subscribed Topics -->
+    <arg name="left_cam_topic"       default="/d455b/infra1/image_rect_raw" if="$(eval 'ntu_'  in bag_file)"/>
+    <arg name="right_cam_topic"      default="/d455b/infra2/image_rect_raw" if="$(eval 'ntu_'  in bag_file)"/>
+
+    <arg name="left_cam_topic"       default="/d455t/infra1/image_rect_raw" if="$(eval 'kth_'  in bag_file)"/>
+    <arg name="right_cam_topic"      default="/d455t/infra2/image_rect_raw" if="$(eval 'kth_'  in bag_file)"/>
+
+    <arg name="left_cam_topic"       default="/d455t/infra1/image_rect_raw" if="$(eval 'tuhh_' in bag_file)"/>
+    <arg name="right_cam_topic"      default="/d455t/infra2/image_rect_raw" if="$(eval 'tuhh_' in bag_file)"/>
+
+    <arg name="left_cam_info_topic"  default="/cam0/camera_info" />
+    <arg name="right_cam_info_topic" default="/cam1/camera_info" />
+
+    <arg name="imu_topic"            default="/vn100/imu" if="$(eval 'ntu_'  in bag_file)"/>
+    <arg name="imu_topic"            default="/vn200/imu" if="$(eval 'kth_'  in bag_file)"/>
+    <arg name="imu_topic"            default="/vn200/imu" if="$(eval 'tuhh_' in bag_file)"/>
+    
+
+    <!-- Empty string ("") means no ground-truth available. Used for init if
+            requested to do ground-truth initialization. -->
+    <arg name="odometry_ground_truth_topic" default="" />
+
+    <!-- Frame IDs -->
+    <arg name="world_frame_id"       default="world" />
+    <arg name="map_frame_id"         default="map" />
+
+    <!-- Publish pipeline output to ROS. -->
+
+    <!-- Only here for convenience -->
+    <arg name="run_stereo_dense" default="false" />
+
+    <!-- Launch main node  -->
+    <node name="kimera_vio_ros_node" pkg="kimera_vio_ros" type="kimera_vio_ros_node"
+            output="screen" ns="kimera_vio_ros"
+            args="--use_lcd=$(arg use_lcd)
+                --vocabulary_path=$(arg path_to_vocab)
+                --flagfile=$(arg params_folder)/flags/Mesher.flags
+                --flagfile=$(arg params_folder)/flags/VioBackend.flags
+                --flagfile=$(arg params_folder)/flags/RegularVioBackend.flags
+                --flagfile=$(arg params_folder)/flags/Visualizer3D.flags
+                --logtostderr=1
+                --colorlogtostderr=1
+                --log_prefix=1
+                --v=$(arg verbosity)
+                --log_output=$(arg log_output)
+                --log_euroc_gt_data=$(arg log_output)
+                --output_path=$(arg log_output_path)
+                --viz_type=$(arg viz_type)
+                --visualize=$(arg visualize)"
+    >
+
+        <!-- launch-prefix="gdb -ex run - -args" -->
+        <param name="params_folder_path"    value="$(arg params_folder)" />
+
+        <param name="online_run"            value="true" />
+        <param name="use_lcd"               value="$(arg use_lcd)" />
+        <param name="use_online_cam_params" value="$(arg use_online_cam_params)" />
+
+        <!-- Frame IDs for Odometry -->
+        <param name="world_frame_id"        value="$(arg world_frame_id)" />
+        <param name="base_link_frame_id"    value="$(arg base_link_frame_id)" />
+        <param name="map_frame_id"          value="$(arg map_frame_id)" />
+        <param name="left_cam_frame_id"     value="$(arg left_cam_frame_id)" />
+        <param name="right_cam_frame_id"    value="$(arg right_cam_frame_id)" />
+
+        <!-- Subscriber topics -->
+        <!-- if we run online, use remap -->
+        <remap from="left_cam/image_raw"    to="$(arg left_cam_topic)"  />
+        <remap from="right_cam/image_raw"   to="$(arg right_cam_topic)" />
+        <remap from="imu"                   to="$(arg imu_topic)" />
+        <remap from="gt_odom"               to="/gt_odom"/>
+
+        <remap from="left_cam/camera_info"  to="$(arg left_cam_info_topic)" />
+        <remap from="right_cam/camera_info" to="$(arg right_cam_info_topic)" />
+
+        <!-- Other subscription topics -->
+        <remap from="reinit_flag"           to="reinit_flag" />
+        <remap from="reinit_pose"           to="reinit_pose" />
+
+        <!-- Remap publisher topics -->
+        <remap from="odometry"                 to="odometry" />
+        <remap from="resiliency"               to="resiliency" />
+        <remap from="imu_bias"                 to="imu_bias" />
+        <remap from="optimized_trajectory"     to="optimized_trajectory" />
+        <remap from="pose_graph"               to="pose_graph" />
+        <remap from="mesh"                     to="mesh" />
+        <remap from="frontend_stats"           to="frontend_stats" />
+        <remap from="debug_mesh_img/image_raw" to="debug_mesh_img/image_raw" />
+        <remap from="feature_tracks/image_raw" to="feature_tracks/image_raw" />
+        <remap from="time_horizon_pointcloud"  to="time_horizon_pointcloud" />
+
+        <!-- Resiliency Thresholds: TODO(Sandro) document -->
+        <param name="velocity_det_threshold"   value="0.1" />
+        <param name="position_det_threshold"   value="0.3" />
+        <param name="stereo_ransac_threshold"  value="20" />
+        <param name="mono_ransac_threshold"    value="30" />
+
+        <!-- Load calibration -->
+        <!-- <rosparam command="load" file="$(arg params_folder)/calibration.yaml"/> -->
+    </node>
+
+    <!-- Launch visualizer -->
+    <include file="$(find pose_graph_tools)/launch/posegraph_view.launch">
+        <arg name="frame_id" value="$(arg world_frame_id)" />
+        <arg name="graph_topic" value="pose_graph" />
+        <arg name="ns" value="kimera_vio_ros" />
+    </include>
+
+
+    <node pkg="rviz" type="rviz" name="rviz" respawn="true" output="log"
+          args="-d $(find kimera_vio_ros)/rviz/kimera_vio_mcdviral.rviz" >
+          <remap from="/cam0/image_raw"   to="$(arg left_cam_topic)"  />
+          <remap from="/cam1/image_raw"   to="$(arg right_cam_topic)" />
+    </node>
+
+    <!-- Rosbag play -->
+    <node required="$(eval autorun > 0)" pkg="rosbag" type="play" name="rosbag_player"
+          args="$(arg publish_clock) $(arg bag_file) -r 0.5 -s 0"
+          launch-prefix="bash -c 'sleep 1; $0 $@' " />
+
+</launch>
